@@ -215,3 +215,25 @@ class simMk3:
         # Iw: inertia of wheels (n x n)
         def getWheelVel(self, L, Iw):
             return np.matmul(np.linalg.inv(np.matmul(L, Iw)), self.hw)
+
+    class PID:
+        def __init__(self, kp, ki, kd):
+            self.kp = kp
+            self.ki = ki
+            self.kd = kd
+
+            self.integral = 0
+            self.prev_er = 0
+
+        def getSignal(self, err, dt):
+            # compute signal
+            signal = (
+                self.kp * err + self.ki * self.integral + self.kd * (err - self.prev_er)
+            )
+
+            # update integral and previous error
+            self.integral = self.integral + err * dt
+            self.prev_er = err
+
+            # return signal
+            return signal

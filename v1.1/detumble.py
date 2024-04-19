@@ -1,15 +1,16 @@
 from simMk3_1 import simMk3
 import numpy as np
+from scipy import signal
 import matplotlib.pyplot as plt
 
 # satellite body parameters
 mass = 10
-inertia = np.array([10, 10, 5])
+inertia = np.array([10, 8, 5])
 dcm = np.identity(3)
 pos = np.empty([1, 3])
 vel = np.empty([1, 3])
-ang_vel = np.array([1, 2, 3])
-hw = np.array([0, 0, 0])
+ang_vel = np.array([10, -2, 6.9])
+hw = np.array([0.2, -18, 12])
 
 # rxn wheel stuff
 L = np.identity(3)  # orthogonal reaction wheels
@@ -23,12 +24,11 @@ Ntorque = np.array([0, 0, 0])
 Btorque = np.array([0, 0, 0])
 Nforce = np.array([0, 0, 0])
 Bforce = np.array([0, 0, 0])
-
-Tc_rxn = np.array([0, -1, 0])
+Tc_rxn = np.array([0.0, 0.0, 0.0])
 
 # simulate rigid body
 dt = 1 / 500
-steps = 10000
+steps = 5000
 
 # save angular velocity data of body and wheels
 ang_vel_th = np.empty([steps, 3])
@@ -36,15 +36,27 @@ ang_vel_rxn_th = np.empty([steps, 3])
 tvec = np.empty([steps, 1])
 error_track = np.empty([steps, 1])
 
+
+# make a controller
+controller1 = simMk3.PID(10, 0, 0)
+controller2 = simMk3.PID(10, 0, 0)
+controller3 = simMk3.PID(10, 0, 0)
+
 # simulate
 t = 0
 for i in range(steps):
     # step
     rb1.step(dt, Nforce, Bforce, Ntorque, Btorque, Tc_rxn)
 
-    if t > 3:
-        Tc_rxn[1] = 0
-        Btorque[1] = 2
+    # PID stuff
+    # calculate desired angular velocity
+    if t > 5:
+        ang_vel_des = np.array([0.0, 0.0, 0.0])
+        err_vec = ang_vel_des - rb1.ang_vel
+
+        Tc_rxn[0] = controller1.getSignal(err_vec[0], dt)
+        Tc_rxn[1] = controller2.getSignal(err_vec[1], dt)
+        Tc_rxn[2] = controller3.getSignal(err_vec[2], dt)
 
     # save data
     ang_vel_th[i, :] = rb1.ang_vel
@@ -52,6 +64,7 @@ for i in range(steps):
     t = t + dt
     tvec[i] = t
     error_track[i] = np.matmul(rb1.dcm, np.transpose(rb1.dcm))[0, 0]
+
 
 # plot angular velocities
 plt.plot(tvec, ang_vel_th[:, 0], label="w1")
